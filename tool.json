@@ -1,0 +1,8 @@
+{
+  "capabilities": ["now", "next"],
+  "handles": "item",
+  "provides": "sequence",
+  "heading": "Sequence Viewer",
+  "type": "IFrame",
+  "src": "./tool.html"
+}

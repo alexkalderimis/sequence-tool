@@ -1,0 +1,17 @@
+{
+  "name": "sequence-tool",
+  "version": "0.0.0",
+  "dependencies": {
+    "jschannel": "mozilla/jschannel",
+    "biojs-sequence": "alexkalderimis/biojs-vis-sequence",
+    "imjs": "~3.2.2",
+    "backbone": "~1.1.2",
+    "underscore": "~1.6.0",
+    "jquery": "~2.1.0",
+    "requirejs": "~2.1.11",
+    "bootstrap": "~3.1.1",
+    "q": "#1.0.1",
+    "font-awesome": "~4.0.3"
+  }
+}
+

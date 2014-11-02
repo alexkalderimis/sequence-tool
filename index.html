@@ -1,0 +1,35 @@
+<html>
+
+<head>
+    <title>Tool Test</title>
+    <link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap.css">
+    <link rel="stylesheet" href="bower_components/font-awesome/css/font-awesome.css">
+    <script charset="UTF-8"
+            data-main="indices/test"
+            type="text/javascript"
+            src="bower_components/requirejs/require.js">
+    </script>
+
+    <style>
+    iframe { border: none; }
+    .panel-body { padding: none; }
+    </style>
+
+</head>
+
+<body>
+
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            The Tool.
+        </div>
+        <div class="panel-body">
+            <iframe seamless height="800px" width="100%" id="child" src="tool.html"></iframe>
+        </div>
+    </div>
+
+    <em>The response is <code id="response">UNKNOWN</code></em>
+
+</body>
+</html>
+

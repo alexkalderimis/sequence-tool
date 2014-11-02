@@ -1,0 +1,9 @@
+.sequence > div > pre {
+    max-height: 600px;
+    overflow: auto;
+    background: #fafafa;
+}
+
+.panel-heading em {
+    font-weight: bold;
+}
