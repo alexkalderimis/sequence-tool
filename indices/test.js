@@ -41,7 +41,19 @@ require(['jschannel'], function (Channel) {
       params: {
         object: {type: 'Gene', fields: {symbol: 'eve'}},
         service: {root: 'http://www.flymine.org/query/service'},
-        pathToSequence: 'sequence.residues'
+        pathToSequence: 'sequence.residues',
+        annotations: [
+          {
+            name: 'Intron',
+            className: 'intron',
+            select: ['introns.chromosomeLocation.start', 'introns.chromosomeLocation.end']
+          },
+          {
+            name: 'Exon',
+            className: 'exon',
+            select: ['exons.chromosomeLocation.start', 'exons.chromosomeLocation.end']
+          }
+        ]
       },
       success: function () {
         console.log("Tool initialised");

@@ -24,6 +24,9 @@ define(function (require) {
         e['click .btn.' + fmt.toLowerCase()] = model.set.bind(model, {format: fmt}, null);
       });
       e['click .btn-clear'] = model.set.bind(model, nullSelection, null);
+      e['click .toggle-annotations'] = function () {
+        model.set('hideAnnotations', !model.get('hideAnnotations'));
+      };
       return e;
     },
   
@@ -75,6 +78,11 @@ define(function (require) {
 
       group3.appendChild(cgLabel);
       frag.appendChild(group3);
+
+      var toggleAnnotations = document.createElement('button');
+      toggleAnnotations.className = 'btn btn-default toggle-annotations';
+      toggleAnnotations.appendChild(document.createTextNode('Toggle Annotations'));
+      frag.appendChild(toggleAnnotations);
 
       this.$el.html(frag);
     }

@@ -7,31 +7,38 @@ define(function (require) {
   var Q = require('q');
   var Sequence = require('sequence');
   var imjs = require('imjs');
+  var DEFAULT_SETTINGS = require('./default-settings');
 
   var FormatButtons = require('./format-buttons');
   var Feature = require('./feature');
-
-  var defaultFormat = 'FASTA';
+  var Annotation = require('./annotation');
+  var Settings = Backbone.Model.extend({defaults: DEFAULT_SETTINGS});
+  var Annotations = Backbone.Collection.extend({ model: Annotation });
 
   var headerTemplate = _.template('<h4><em><%= feature %></em> (<%= length %> bp)</h4>');
-
-  var Annotations = Backbone.Collection.extend({ model: Feature });
 
   var Tool = Backbone.View.extend({
 
     initialize: function (options) {
+      var annoData = (options.data.annotations || []);
+      this.feature = new Feature();
+      this.annotations = new Annotations();
+      this.settings = new Settings();
+      if (options.config.format) this.settings.set('format');
+      this.settings.set('service', options.data.service);
+
       if (options.data.sequence) {
-        this.feature = new Feature(_.omit(options.data, 'annotations'));
+        this.feature.set(_.omit(options.data, 'annotations'));
+        this.annotations.add(annoData);
       } else {
-        this.feature = new Feature();
         this.requestFeature(options.data);
       }
-      this.annotations = new Annotations(options.data.annotations || []);
-      this.settings = new Backbone.Model();
-      this.settings.set('format', (options.config.format || defaultFormat));
 
-      this.listenTo(this.feature, 'change:sequence', this.setSequence.bind(this));
       this.listenTo(this.settings, 'change', this.applySettings.bind(this));
+      this.listenTo(this.feature, 'change:sequence', this.setSequence.bind(this));
+      this.listenTo(this.feature, 'change:objectId',
+        this.fetchAnnotations.bind(this, annoData));
+      this.listenTo(this.annotations, 'add', this.addAnnotation.bind(this));
 
       var def = Q.defer();
       this.ready = def.promise;
@@ -42,11 +49,11 @@ define(function (require) {
       var self = this;
       var type = data.object.type;
       var fields = data.object.fields;
-      var service = imjs.Service.connect(data.service);
+      var connection = imjs.Service.connect(data.service);
       var query = {select: ['*'], from: type, where: fields};
       var feature = self.feature;
 
-      service.records(query).then(function (matches) {
+      connection.records(query).then(function (matches) {
         feature.set(matches[0]);
       }).then(function () {
         var sequenceQuery = {
@@ -54,7 +61,7 @@ define(function (require) {
           from: type,
           where: {id: feature.get('objectId')}
         };
-        return service.rows(sequenceQuery);
+        return connection.rows(sequenceQuery);
       }).then(function (rows) {
           feature.set({sequence: rows[0][0]});
         }, function (e) {
@@ -63,12 +70,48 @@ define(function (require) {
       });
     },
 
+    fetchAnnotations: function (annotationData) {
+      var self = this
+        , id = this.feature.get('objectId')
+        , type = this.feature.get('class')
+        , c = imjs.Service.connect(this.settings.get('service'))
+        , featureStart = ['chromosomeLocation.start']
+        , constraint = {id: id};
+
+      var getOffset = c.rows({select: featureStart, from: type, where: constraint})
+                       .then(getIn([0, 0]))
+                       .then(toOffset);
+      getOffset.then(function (offset) {
+        var toRegions = rowsToRegions(offset);
+        _.each(annotationData, function (a) {
+          var query = {select: a.select, from: type, where: {id: id}};
+          c.rows(query).then(toRegions).then(createAnnotation).then(addAnnotation);
+
+          function createAnnotation(regions) {
+            console.log(regions);
+            return {name: a.name, regions: regions, className: a.className};
+          }
+
+          function addAnnotation (annotation) {
+            return self.annotations.add(annotation);
+          }
+        });
+      });
+    },
+
     applySettings: function () {
       if (!this.bioJsComponent) return;
 
-      this.bioJsComponent.setFormat(this.settings.get('format'));
       var newS = this.settings.pick('start', 'end');
+
+      this.bioJsComponent.setFormat(this.settings.get('format'));
       this.bioJsComponent.setSelection(newS.start, newS.end);
+      this.bioJsComponent.setNumCols(this.settings.get('columns'));
+      if (this.settings.get('hideAnnotations')) {
+        this.bioJsComponent.hideAnnotations();
+      } else {
+        this.bioJsComponent.showAnnotations();
+      }
     },
 
     setSequence: function () {
@@ -77,6 +120,12 @@ define(function (require) {
       this.bioJsComponent.setSequence(
           this.feature.get('sequence'),
           this.feature.getId());
+    },
+
+    addAnnotation: function (annotation) {
+      if (!this.bioJsComponent) return;
+
+      this.bioJsComponent.addAnnotation(annotation.toJSON());
     },
 
     render: function () {
@@ -104,14 +153,16 @@ define(function (require) {
             sequence: sequence,
             target: viewer,
             format: this.settings.get('format'),
+            numCols: this.settings.get('columns'),
             id: this.feature.getId(),
             annotations: this.annotations.toJSON(),
             formatSelectorVisible: false
           });
-          this.bioJsComponent.on('selection-changed', function (selection) {
+          this.bioJsComponent.on(Sequence.EVT_ON_SELECTION_CHANGED, function (s) {
             // selection: {start, end}
-            this.settings.set(selection);
+            this.settings.set(s);
           }.bind(this));
+          this.applySettings();
         } catch (e) {
           console.error(e);
           return this.trigger('error', "Error rendering");
@@ -130,5 +181,23 @@ define(function (require) {
   });
 
   return Tool;
+
+  function getIn (coords) {
+    return function (object) {
+      return coords.reduce(function (memo, coord) { return memo[coord]; }, object);
+    };
+  }
+
+  function toOffset (startPos) {
+    return startPos - 1; // Genomic locations are 1-based.
+  }
+
+  function rowsToRegions (offset) {
+    return function (rows) {
+      return rows.map(function (row) {
+        return {start: row[0] - offset, end: row[1] - offset};
+      });
+    };
+  }
 
 });
