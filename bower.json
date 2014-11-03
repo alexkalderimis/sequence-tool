@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "dependencies": {
     "jschannel": "mozilla/jschannel",
-    "biojs-sequence": "alexkalderimis/biojs-vis-sequence",
+    "biojs-sequence": "alexkalderimis/biojs-vis-sequence#e320572",
     "imjs": "~3.2.2",
     "backbone": "~1.1.2",
     "underscore": "~1.6.0",
